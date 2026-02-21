@@ -1,0 +1,38 @@
+# ── Virtual Environment ──────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Python Cache ─────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# ── Model Weights (large binary — downloaded at runtime) ──
+model/model.safetensors
+model/training_args.bin
+
+# ── NLTK Data ────────────────────────────────────────
+nltk_data/
+
+# ── Streamlit ────────────────────────────────────────
+.streamlit/secrets.toml
+
+# ── Jupyter Notebooks outputs ────────────────────────
+*.ipynb_checkpoints/
+
+# ── OS / Editor ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ── Logs ─────────────────────────────────────────────
+*.log
+
+# ── Environment vars ─────────────────────────────────
+.env

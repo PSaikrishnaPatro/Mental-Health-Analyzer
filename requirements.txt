@@ -1,0 +1,9 @@
+gdown
+torch==2.1.0
+numpy
+pandas
+transformers==4.36.2
+streamlit
+regex
+nltk
+plotly
