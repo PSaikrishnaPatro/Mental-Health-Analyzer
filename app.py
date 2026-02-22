@@ -427,41 +427,43 @@ elif nav == "🔍 Analyze":
 
             # ── Plotly Chart ──
             labels_list  = list(label_map.values())
-            probs_list   = [float(probs[i]) * 100 for i in range(len(labels_list))]
-            colors_list  = [label_colors[l] for l in labels_list]
+probs_list   = [float(probs[i]) * 100 for i in range(len(labels_list))]
+colors_list  = [label_colors[l] for l in labels_list]
 
-            fig = go.Figure(go.Bar(
-                x=probs_list,
-                y=labels_list,
-                orientation='h',
-                marker=dict(
-                    color=colors_list,
-                    opacity=[1.0 if l == pred_label else 0.38 for l in labels_list],
-                    line=dict(width=0),
-                ),
-                text=[f"{p:.1f}%" for p in probs_list],
-                textposition='outside',
-                textfont=dict(color='#94A3B8', size=12),
-                hovertemplate="<b>%{y}</b><br>Confidence: %{x:.2f}%<extra></extra>",
-            ))
-            fig.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=0, r=60, t=10, b=10),
-                xaxis=dict(
-                    range=[0, max(probs_list) + 12],
-                    showgrid=False, zeroline=False,
-                    tickfont=dict(color='#475569'),
-                    showticklabels=False,
-                ),
-                yaxis=dict(
-                    tickfont=dict(color='#94A3B8', size=13),
-                    gridcolor='rgba(255,255,255,0.04)',
-                ),
-                height=300,
-                bargap=0.35,
-            )
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+fig = go.Figure(go.Bar(
+    x=probs_list,
+    y=labels_list,
+    orientation='h',
+    marker=dict(
+        color=colors_list,
+        opacity=[1.0 if l == pred_label else 0.38 for l in labels_list],
+        line=dict(width=0),
+    ),
+    text=[f"{p:.1f}%" for p in probs_list],
+    textposition='inside',
+    insidetextanchor='end',
+    textfont=dict(color='#FFFFFF', size=12),
+    hovertemplate="<b>%{y}</b><br>Confidence: %{x:.2f}%<extra></extra>",
+))
+fig.update_layout(
+    paper_bgcolor='rgba(0,0,0,0)',
+    plot_bgcolor='rgba(0,0,0,0)',
+    margin=dict(l=0, r=20, t=10, b=10),
+    xaxis=dict(
+        range=[0, 100],
+        showgrid=False, zeroline=False,
+        tickfont=dict(color='#475569'),
+        showticklabels=False,
+    ),
+    yaxis=dict(
+        tickfont=dict(color='#94A3B8', size=13),
+        gridcolor='rgba(255,255,255,0.04)',
+    ),
+    height=300,
+    bargap=0.35,
+    dragmode=False,
+)
+st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": True})
 
             # ── Crisis Box (if applicable) ──
             if res["is_crisis"]:
