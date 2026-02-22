@@ -427,43 +427,41 @@ elif nav == "🔍 Analyze":
 
             # ── Plotly Chart ──
             labels_list  = list(label_map.values())
-probs_list   = [float(probs[i]) * 100 for i in range(len(labels_list))]
-colors_list  = [label_colors[l] for l in labels_list]
+            probs_list   = [float(probs[i]) * 100 for i in range(len(labels_list))]
+            colors_list  = [label_colors[l] for l in labels_list]
 
-fig = go.Figure(go.Bar(
-    x=probs_list,
-    y=labels_list,
-    orientation='h',
-    marker=dict(
-        color=colors_list,
-        opacity=[1.0 if l == pred_label else 0.38 for l in labels_list],
-        line=dict(width=0),
-    ),
-    text=[f"{p:.1f}%" for p in probs_list],
-    textposition='inside',
-    insidetextanchor='end',
-    textfont=dict(color='#FFFFFF', size=12),
-    hovertemplate="<b>%{y}</b><br>Confidence: %{x:.2f}%<extra></extra>",
-))
-fig.update_layout(
-    paper_bgcolor='rgba(0,0,0,0)',
-    plot_bgcolor='rgba(0,0,0,0)',
-    margin=dict(l=0, r=20, t=10, b=10),
-    xaxis=dict(
-        range=[0, 100],
-        showgrid=False, zeroline=False,
-        tickfont=dict(color='#475569'),
-        showticklabels=False,
-    ),
-    yaxis=dict(
-        tickfont=dict(color='#94A3B8', size=13),
-        gridcolor='rgba(255,255,255,0.04)',
-    ),
-    height=300,
-    bargap=0.35,
-    dragmode=False,
-)
-st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, "staticPlot": True})
+            fig = go.Figure(go.Bar(
+                x=probs_list,
+                y=labels_list,
+                orientation='h',
+                marker=dict(
+                    color=colors_list,
+                    opacity=[1.0 if l == pred_label else 0.38 for l in labels_list],
+                    line=dict(width=0),
+                ),
+                text=[f"{p:.1f}%" for p in probs_list],
+                textposition='outside',
+                textfont=dict(color='#94A3B8', size=12),
+                hovertemplate="<b>%{y}</b><br>Confidence: %{x:.2f}%<extra></extra>",
+            ))
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                margin=dict(l=0, r=60, t=10, b=10),
+                xaxis=dict(
+                    range=[0, max(probs_list) + 12],
+                    showgrid=False, zeroline=False,
+                    tickfont=dict(color='#475569'),
+                    showticklabels=False,
+                ),
+                yaxis=dict(
+                    tickfont=dict(color='#94A3B8', size=13),
+                    gridcolor='rgba(255,255,255,0.04)',
+                ),
+                height=300,
+                bargap=0.35,
+            )
+            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
 
             # ── Crisis Box (if applicable) ──
             if res["is_crisis"]:
@@ -478,265 +476,3 @@ st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False, 
                         💬 <b>Text HOME to 741741</b> — Crisis Text Line (24/7)<br>
                         🌍 <a href="https://www.iasp.info/resources/Crisis_Centres/" style="color:#93C5FD;" target="_blank">Find international crisis centres</a>
                     </div>
-                </div>
-                """, unsafe_allow_html=True)
-                st.markdown("")
-
-            # ── Coping Strategies & Resources ──
-            col_tips, col_links = st.columns([3, 2], gap="large")
-            with col_tips:
-                st.markdown(f"### 🛠️ Coping Strategies")
-                for tip in res["tips"]:
-                    st.markdown(f'<div class="tip-item">{tip}</div>', unsafe_allow_html=True)
-
-            with col_links:
-                st.markdown("### 🔗 Helpful Resources")
-                for name, url in res["links"]:
-                    st.markdown(f"""
-                    <a href="{url}" target="_blank" style="
-                        display:block; padding:12px 16px; margin:6px 0;
-                        background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2);
-                        border-radius:10px; color:#A5B4FC; font-size:0.85rem;
-                        text-decoration:none; transition:all 0.2s;
-                    ">↗ {name}</a>
-                    """, unsafe_allow_html=True)
-
-            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-            # ── Save to History ──
-            save_col, _ = st.columns([2, 8])
-            with save_col:
-                if st.button("💾 Save to History", use_container_width=True):
-                    snippet = user_input[:80] + ("…" if len(user_input) > 80 else "")
-                    st.session_state.history.append({
-                        "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                        "Text Snippet": snippet,
-                        "Prediction": pred_label,
-                        "Confidence": f"{confidence:.1f}%",
-                    })
-                    st.success(f"✅ Saved to History! ({len(st.session_state.history)} entries)")
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# PAGE: BATCH PREDICT
-# ═════════════════════════════════════════════════════════════════════════════
-elif nav == "📋 Batch Predict":
-    st.markdown("## 📋 Batch Prediction")
-    st.markdown('<p style="color:#64748B; margin-top:-10px;">Upload a CSV with a <code>text</code> column to classify all rows at once.</p>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="glass-card">
-        <b style="color:#C7D2FE;">CSV Format</b>
-        <div style="margin-top:8px; font-family:monospace; font-size:0.85rem; color:#94A3B8;">
-            text<br>
-            "I have been feeling hopeless for weeks."<br>
-            "Today was a great day, I feel fantastic!"<br>
-            "The pressure at work is unbearable."
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    uploaded_file = st.file_uploader("Upload CSV", type=["csv"], label_visibility="collapsed")
-
-    if uploaded_file:
-        df = pd.read_csv(uploaded_file)
-        if 'text' not in df.columns:
-            st.error("❌ The CSV must contain a column named **text**.")
-        else:
-            st.info(f"📄 {len(df)} rows detected. Running predictions…")
-            progress = st.progress(0, text="Analyzing…")
-            preds, confidences = [], []
-            total = len(df)
-            for i, txt in enumerate(df['text']):
-                cleaned = clean_and_lemmatize_text(str(txt))
-                inp = tokenizer(cleaned, padding="max_length", truncation=True, max_length=128, return_tensors="pt")
-                inp = {k: v.to(DEVICE) for k, v in inp.items()}
-                with torch.no_grad():
-                    out = model(**inp)
-                    prb = F.softmax(out.logits, dim=1).cpu().numpy()[0]
-                    pid = int(prb.argmax())
-                    preds.append(label_map[pid])
-                    confidences.append(f"{prb[pid]*100:.1f}%")
-                progress.progress((i + 1) / total, text=f"Analyzed {i+1}/{total} rows…")
-
-            df['Prediction'] = preds
-            df['Confidence'] = confidences
-
-            st.success(f"✅ Done! Classified **{total}** rows.")
-            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-
-            # ── Label Distribution Pie ──
-            dist = pd.Series(preds).value_counts().reset_index()
-            dist.columns = ['Label', 'Count']
-            pie_colors = [label_colors.get(l, "#888") for l in dist['Label']]
-            fig_pie = px.pie(
-                dist, names='Label', values='Count',
-                color_discrete_sequence=pie_colors,
-                hole=0.45,
-            )
-            fig_pie.update_layout(
-                paper_bgcolor='rgba(0,0,0,0)',
-                plot_bgcolor='rgba(0,0,0,0)',
-                legend=dict(font=dict(color='#94A3B8')),
-                margin=dict(l=0, r=0, t=20, b=0),
-                font=dict(color='#94A3B8'),
-            )
-            col_pie, col_tbl = st.columns([1, 2], gap="large")
-            with col_pie:
-                st.markdown("#### Label Distribution")
-                st.plotly_chart(fig_pie, use_container_width=True, config={"displayModeBar": False})
-            with col_tbl:
-                st.markdown("#### Results Preview")
-                st.dataframe(
-                    df[['text', 'Prediction', 'Confidence']].head(20),
-                    use_container_width=True,
-                    hide_index=True,
-                )
-
-            csv_buf = BytesIO()
-            df[['text', 'Prediction', 'Confidence']].to_csv(csv_buf, index=False)
-            st.download_button(
-                "⬇️ Download Full Predictions CSV",
-                data=csv_buf.getvalue(),
-                file_name="mental_health_predictions.csv",
-                mime="text/csv",
-            )
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# PAGE: HISTORY
-# ═════════════════════════════════════════════════════════════════════════════
-elif nav == "📜 History":
-    st.markdown("## 📜 Session History")
-    st.markdown('<p style="color:#64748B; margin-top:-10px;">All predictions saved during this session.</p>', unsafe_allow_html=True)
-
-    if not st.session_state.history:
-        st.markdown("""
-        <div class="glass-card" style="text-align:center; padding:40px;">
-            <div style="font-size:2.5rem; margin-bottom:12px;">📂</div>
-            <div style="color:#475569;">No predictions saved yet.</div>
-            <div style="color:#334155; font-size:0.82rem; margin-top:6px;">
-                Go to <b>🔍 Analyze</b>, run a prediction, then click <b>💾 Save to History</b>.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        df_hist = pd.DataFrame(st.session_state.history)
-        st.dataframe(df_hist, use_container_width=True, hide_index=True)
-
-        c1, c2 = st.columns(2)
-        with c1:
-            hist_csv = BytesIO()
-            df_hist.to_csv(hist_csv, index=False)
-            st.download_button(
-                "⬇️ Download History CSV",
-                data=hist_csv.getvalue(),
-                file_name="analysis_history.csv",
-                mime="text/csv",
-            )
-        with c2:
-            if st.button("🗑️ Clear History"):
-                st.session_state.history = []
-                st.rerun()
-
-        # Label distribution
-        st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
-        st.markdown("#### Distribution of Saved Predictions")
-        hist_dist = df_hist['Prediction'].value_counts().reset_index()
-        hist_dist.columns = ['Label', 'Count']
-        hbar_colors = [label_colors.get(l, "#888") for l in hist_dist['Label']]
-        fig_hist = go.Figure(go.Bar(
-            x=hist_dist['Count'],
-            y=hist_dist['Label'],
-            orientation='h',
-            marker_color=hbar_colors,
-            text=hist_dist['Count'],
-            textposition='outside',
-            textfont=dict(color='#94A3B8'),
-        ))
-        fig_hist.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)',
-            plot_bgcolor='rgba(0,0,0,0)',
-            xaxis=dict(showgrid=False, zeroline=False, showticklabels=False),
-            yaxis=dict(tickfont=dict(color='#94A3B8', size=13)),
-            margin=dict(l=0, r=40, t=10, b=10),
-            height=250,
-            bargap=0.4,
-        )
-        st.plotly_chart(fig_hist, use_container_width=True, config={"displayModeBar": False})
-
-
-# ═════════════════════════════════════════════════════════════════════════════
-# PAGE: ABOUT
-# ═════════════════════════════════════════════════════════════════════════════
-elif nav == "ℹ️ About":
-    st.markdown("## ℹ️ About This Project")
-
-    col_a, col_b = st.columns(2, gap="large")
-    with col_a:
-        st.markdown("""
-        <div class="glass-card">
-            <h3 style="margin-top:0;">🤖 Model Details</h3>
-            <table style="width:100%; font-size:0.88rem; color:#CBD5E1; border-collapse:collapse;">
-                <tr><td style="color:#64748B; padding:6px 0;">Architecture</td><td>BERT (bert-base-uncased)</td></tr>
-                <tr><td style="color:#64748B; padding:6px 0;">Task</td><td>Sequence Classification</td></tr>
-                <tr><td style="color:#64748B; padding:6px 0;">Accuracy</td><td>~90%</td></tr>
-                <tr><td style="color:#64748B; padding:6px 0;">Max Input Length</td><td>128 tokens</td></tr>
-                <tr><td style="color:#64748B; padding:6px 0;">Output Classes</td><td>7 mental health categories</td></tr>
-                <tr><td style="color:#64748B; padding:6px 0;">Training Data</td><td>50,000+ social media posts</td></tr>
-                <tr><td style="color:#64748B; padding:6px 0;">Split</td><td>70% train / 15% val / 15% test</td></tr>
-            </table>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="glass-card">
-            <h3 style="margin-top:0;">🧹 Preprocessing Pipeline</h3>
-            <div style="font-size:0.87rem; color:#CBD5E1; line-height:2;">
-                1. Lowercase & HTML entity decode<br>
-                2. Remove URLs, @mentions, hashtags<br>
-                3. Strip special characters & normalize whitespace<br>
-                4. POS-aware lemmatization via WordNet<br>
-                5. Class balancing with oversampling & augmentation
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col_b:
-        st.markdown("""
-        <div class="glass-card">
-            <h3 style="margin-top:0;">⚠️ Limitations</h3>
-            <div style="font-size:0.87rem; color:#CBD5E1; line-height:2;">
-                🌐 <b>Language:</b> English only — may degrade on informal/slang text<br>
-                📌 <b>Domain:</b> Trained on social media; may differ for clinical notes<br>
-                🎭 <b>Sarcasm:</b> Partial detection only<br>
-                📝 <b>Length:</b> Needs 2-3 sentences for meaningful context<br>
-                🏥 <b>Scope:</b> Only covers 7 predefined classes<br>
-                🤖 <b>Not clinical:</b> Cannot replace a licensed professional
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("""
-        <div class="glass-card">
-            <h3 style="margin-top:0;">📊 Dataset</h3>
-            <div style="font-size:0.87rem; color:#CBD5E1; line-height:1.8;">
-                Source: Kaggle Mental Health Sentiment Dataset<br>
-                Classes: Anxiety · Bipolar · Depression · Normal · Personality Disorder · Stress · Suicidal<br><br>
-                <a href="https://www.kaggle.com/datasets/suchintikasarkar/sentiment-analysis-for-mental-health"
-                   target="_blank" style="color:#818CF8;">↗ View Dataset on Kaggle</a>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    st.markdown("""
-    <div class="glass-card" style="border-color:rgba(239,35,60,0.25); background:rgba(239,35,60,0.04); margin-top:4px;">
-        <b style="color:#FC8181;">🛡️ Disclaimer</b>
-        <div style="font-size:0.85rem; color:#94A3B8; margin-top:8px; line-height:1.7;">
-            This tool is <b>for informational purposes only</b> and does not constitute medical advice,
-            diagnosis, or treatment. Always seek the guidance of a qualified mental health professional.
-            If you are experiencing a mental health crisis, call <b>988</b> (US) or contact your local
-            emergency services immediately.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
