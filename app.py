@@ -144,12 +144,15 @@ h3 { font-size: 1.15rem !important; font-weight: 600 !important; color: #A5B4FC 
 }
 .stTextArea textarea:focus { border-color: #6366F1 !important; box-shadow: 0 0 0 3px rgba(99,102,241,0.15) !important; }
 
-/* ── Buttons ── */
+/* ── Buttons — compact on all screen sizes ── */
 .stButton > button {
     background: linear-gradient(135deg, #6366F1, #8B5CF6) !important;
     color: white !important; font-weight: 600 !important;
     border: none !important; border-radius: 10px !important;
-    padding: 0.65em 1.8em !important; font-size: 1rem !important;
+    padding: 0.55em 1.4em !important; font-size: 0.95rem !important;
+    width: auto !important;
+    min-width: 160px !important;
+    max-width: 220px !important;
     transition: opacity 0.2s, transform 0.2s !important;
 }
 .stButton > button:hover { opacity: 0.88 !important; transform: translateY(-1px) !important; }
@@ -381,9 +384,8 @@ elif nav == "🔍 Analyze":
         </div>
         """, unsafe_allow_html=True)
 
-    col_btn, col_clear = st.columns([2, 8])
-    with col_btn:
-        run = st.button("🔍 Analyze Text", use_container_width=True)
+    # ── Compact button — no use_container_width, CSS caps the size ──
+    run = st.button("🔍 Analyze Text", use_container_width=False)
 
     if run:
         if not user_input.strip():
@@ -615,7 +617,7 @@ elif nav == "📜 History":
             mime="text/csv",
         )
 
-        if st.button("🗑️ Clear History"):
+        if st.button("🗑️ Clear History", use_container_width=False):
             st.session_state.history = []
             st.rerun()
 
