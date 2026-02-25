@@ -278,7 +278,7 @@ if nav == "🏠 Home":
         ("🏷️", "7", "Mental Health Classes"),
         ("⚡", "BERT", "NLP Architecture"),
     ]
-    for col, (icon, val, label) in zip([c1,c2,c3,c4], stats):
+    for col, (icon, val, label) in zip([c1, c2, c3, c4], stats):
         col.markdown(f"""
         <div class="metric-card">
             <div style="font-size:1.6rem;">{icon}</div>
@@ -291,7 +291,6 @@ if nav == "🏠 Home":
 
     # ── Features ──
     st.markdown("### ✨ Key Features")
-    f1, f2, f3 = st.columns(3)
     features = [
         ("🔍", "Single Prediction", "Analyze any text statement and get an instant mental health classification with confidence scores."),
         ("📊", "Probability Chart", "Interactive Plotly bar chart showing confidence across all 7 classes."),
@@ -401,10 +400,10 @@ elif nav == "🔍 Analyze":
                     pred_label = label_map[pred_id]
                     confidence = float(probs[pred_id]) * 100
 
-            color   = label_colors[pred_label]
-            icon    = label_icons.get(pred_label, "")
-            desc    = get_label_description(pred_label)
-            res     = get_resources(pred_label)
+            color = label_colors[pred_label]
+            icon  = label_icons.get(pred_label, "")
+            desc  = get_label_description(pred_label)
+            res   = get_resources(pred_label)
 
             # ── Result Badge ──
             st.markdown(f"""
@@ -425,10 +424,10 @@ elif nav == "🔍 Analyze":
             </div>
             """, unsafe_allow_html=True)
 
-            # ── Plotly Chart ──
-            labels_list  = list(label_map.values())
-            probs_list   = [float(probs[i]) * 100 for i in range(len(labels_list))]
-            colors_list  = [label_colors[l] for l in labels_list]
+            # ── Plotly Chart (fixed) ──
+            labels_list = list(label_map.values())
+            probs_list  = [float(probs[i]) * 100 for i in range(len(labels_list))]
+            colors_list = [label_colors[l] for l in labels_list]
 
             fig = go.Figure(go.Bar(
                 x=probs_list,
@@ -440,16 +439,17 @@ elif nav == "🔍 Analyze":
                     line=dict(width=0),
                 ),
                 text=[f"{p:.1f}%" for p in probs_list],
-                textposition='outside',
-                textfont=dict(color='#94A3B8', size=12),
+                textposition='inside',
+                insidetextanchor='end',
+                textfont=dict(color='#FFFFFF', size=12),
                 hovertemplate="<b>%{y}</b><br>Confidence: %{x:.2f}%<extra></extra>",
             ))
             fig.update_layout(
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
-                margin=dict(l=0, r=60, t=10, b=10),
+                margin=dict(l=0, r=20, t=10, b=10),
                 xaxis=dict(
-                    range=[0, max(probs_list) + 12],
+                    range=[0, 100],
                     showgrid=False, zeroline=False,
                     tickfont=dict(color='#475569'),
                     showticklabels=False,
@@ -460,8 +460,13 @@ elif nav == "🔍 Analyze":
                 ),
                 height=300,
                 bargap=0.35,
+                dragmode=False,
             )
-            st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+            st.plotly_chart(
+                fig,
+                use_container_width=True,
+                config={"displayModeBar": False, "staticPlot": True},
+            )
 
             # ── Crisis Box (if applicable) ──
             if res["is_crisis"]:
@@ -476,3 +481,188 @@ elif nav == "🔍 Analyze":
                         💬 <b>Text HOME to 741741</b> — Crisis Text Line (24/7)<br>
                         🌍 <a href="https://www.iasp.info/resources/Crisis_Centres/" style="color:#93C5FD;" target="_blank">Find international crisis centres</a>
                     </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+
+            # ── Coping Strategies & Resources ──
+            col_tips, col_res = st.columns([1, 1], gap="large")
+
+            with col_tips:
+                st.markdown("### 🛠️ Coping Strategies")
+                for tip in res.get("tips", []):
+                    st.markdown(f'<div class="tip-item">{tip}</div>', unsafe_allow_html=True)
+
+            with col_res:
+                st.markdown("### 🔗 Helpful Resources")
+                for r_item in res.get("resources", []):
+                    st.markdown(f"""
+                    <a href="{r_item['url']}" target="_blank" style="
+                        display:block; padding:10px 16px; margin:6px 0;
+                        background:rgba(99,102,241,0.08); border:1px solid rgba(99,102,241,0.2);
+                        border-radius:8px; color:#A5B4FC; font-size:0.88rem;
+                        text-decoration:none;">
+                        ↗ {r_item['name']}
+                    </a>
+                    """, unsafe_allow_html=True)
+
+            st.markdown('<div class="custom-divider"></div>', unsafe_allow_html=True)
+
+            # ── Save to History ──
+            if st.button("💾 Save to History", use_container_width=False):
+                st.session_state.history.append({
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    "text": user_input[:120] + ("…" if len(user_input) > 120 else ""),
+                    "prediction": pred_label,
+                    "confidence": f"{confidence:.1f}%",
+                })
+                st.success("✅ Saved to history!")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PAGE: BATCH PREDICT
+# ═════════════════════════════════════════════════════════════════════════════
+elif nav == "📋 Batch Predict":
+    st.markdown("## 📋 Batch Predict")
+    st.markdown('<p style="color:#64748B; margin-top:-10px;">Upload a CSV file with a text column to classify multiple entries at once.</p>', unsafe_allow_html=True)
+
+    uploaded_file = st.file_uploader(
+        "Upload CSV",
+        type=["csv"],
+        label_visibility="collapsed",
+        help="CSV must contain a column named 'text'",
+    )
+
+    if uploaded_file:
+        df = pd.read_csv(uploaded_file)
+        st.markdown(f"""
+        <div class="glass-card">
+            <div style="font-size:0.78rem; color:#64748B; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">File Preview</div>
+            <div style="color:#CBD5E1; font-size:0.88rem;">{len(df)} rows · {len(df.columns)} columns detected</div>
+        </div>
+        """, unsafe_allow_html=True)
+        st.dataframe(df.head(5), use_container_width=True)
+
+        text_col = None
+        for c in df.columns:
+            if "text" in c.lower():
+                text_col = c
+                break
+
+        if text_col is None:
+            st.error("❌ No column named 'text' found. Please rename your text column to 'text'.")
+        else:
+            if st.button("🚀 Run Batch Prediction", use_container_width=False):
+                predictions, confidences = [], []
+                progress = st.progress(0)
+                status   = st.empty()
+                total    = len(df)
+
+                for i, row_text in enumerate(df[text_col].astype(str)):
+                    cleaned = clean_and_lemmatize_text(row_text)
+                    inputs  = tokenizer(cleaned, padding="max_length", truncation=True, max_length=128, return_tensors="pt")
+                    inputs  = {k: v.to(DEVICE) for k, v in inputs.items()}
+                    with torch.no_grad():
+                        outputs = model(**inputs)
+                        p = F.softmax(outputs.logits, dim=1).cpu().numpy()[0]
+                    pid = int(p.argmax())
+                    predictions.append(label_map[pid])
+                    confidences.append(f"{float(p[pid]) * 100:.1f}%")
+                    progress.progress((i + 1) / total)
+                    status.markdown(f'<span style="color:#94A3B8; font-size:0.82rem;">Processing {i+1}/{total}…</span>', unsafe_allow_html=True)
+
+                df["prediction"]  = predictions
+                df["confidence"]  = confidences
+                progress.empty()
+                status.empty()
+
+                st.success(f"✅ Done! Classified {total} rows.")
+                st.dataframe(df, use_container_width=True)
+
+                csv_bytes = df.to_csv(index=False).encode("utf-8")
+                st.download_button(
+                    label="⬇️ Download Results CSV",
+                    data=csv_bytes,
+                    file_name=f"predictions_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                )
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PAGE: HISTORY
+# ═════════════════════════════════════════════════════════════════════════════
+elif nav == "📜 History":
+    st.markdown("## 📜 Prediction History")
+    st.markdown('<p style="color:#64748B; margin-top:-10px;">All predictions from this session.</p>', unsafe_allow_html=True)
+
+    if not st.session_state.history:
+        st.markdown("""
+        <div class="glass-card" style="text-align:center; padding:40px;">
+            <div style="font-size:2.5rem; margin-bottom:12px;">📭</div>
+            <div style="color:#64748B; font-size:0.95rem;">No predictions yet. Head to <b style="color:#A5B4FC;">🔍 Analyze</b> to get started.</div>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        hist_df = pd.DataFrame(st.session_state.history)
+        st.dataframe(hist_df, use_container_width=True)
+
+        csv_bytes = hist_df.to_csv(index=False).encode("utf-8")
+        st.download_button(
+            label="⬇️ Download History CSV",
+            data=csv_bytes,
+            file_name=f"history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+            mime="text/csv",
+        )
+
+        if st.button("🗑️ Clear History"):
+            st.session_state.history = []
+            st.rerun()
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# PAGE: ABOUT
+# ═════════════════════════════════════════════════════════════════════════════
+elif nav == "ℹ️ About":
+    st.markdown("## ℹ️ About")
+
+    st.markdown("""
+    <div class="glass-card">
+        <h3 style="margin-top:0;">🧠 Mental Health Analyzer</h3>
+        <div style="color:#CBD5E1; font-size:0.92rem; line-height:1.8;">
+            This tool uses a fine-tuned <b style="color:#C7D2FE;">BERT</b> (Bidirectional Encoder Representations from Transformers)
+            model to classify text into one of 7 mental health categories. It was trained on 50,000+ real-world social media
+            posts and clinical text samples.<br><br>
+            <b style="color:#C7D2FE;">Supported classes:</b> Anxiety, Depression, Bipolar, Suicidal, Stress, Personality Disorder, Normal.<br><br>
+            <b style="color:#FC8181;">⚠️ Disclaimer:</b> This tool is for informational and educational purposes only.
+            It is not a diagnostic tool and should not replace professional mental health evaluation or treatment.
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="glass-card">
+        <h3 style="margin-top:0;">🔬 Model Details</h3>
+        <div style="color:#CBD5E1; font-size:0.92rem; line-height:2;">
+            <b style="color:#A5B4FC;">Architecture:</b> bert-base-uncased (fine-tuned)<br>
+            <b style="color:#A5B4FC;">Training samples:</b> 50,000+<br>
+            <b style="color:#A5B4FC;">Validation accuracy:</b> ~90%<br>
+            <b style="color:#A5B4FC;">Input max length:</b> 128 tokens<br>
+            <b style="color:#A5B4FC;">Framework:</b> PyTorch + HuggingFace Transformers<br>
+            <b style="color:#A5B4FC;">Interface:</b> Streamlit
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="glass-card">
+        <h3 style="margin-top:0;">🆘 Crisis Resources</h3>
+        <div style="color:#CBD5E1; font-size:0.92rem; line-height:2;">
+            📞 <b>988 Suicide & Crisis Lifeline</b> — Call or text 988 (US, 24/7)<br>
+            💬 <b>Crisis Text Line</b> — Text HOME to 741741 (US, 24/7)<br>
+            🌍 <a href="https://www.iasp.info/resources/Crisis_Centres/" style="color:#93C5FD;" target="_blank">International Association for Suicide Prevention</a><br>
+            🧠 <a href="https://www.nami.org/help" style="color:#93C5FD;" target="_blank">NAMI Helpline</a><br>
+            💙 <a href="https://www.mentalhealth.gov/" style="color:#93C5FD;" target="_blank">MentalHealth.gov</a>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
